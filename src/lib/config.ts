@@ -23,6 +23,9 @@ const ConfigSchema = z.object({
     name: z.string().default("@yonaka15/mcp-server-redmine"),
     version: z.string().default("0.1.0"),
   }),
+
+  // 読み取り専用モード（true の場合、作成・更新・削除などの書き込み系ツールを無効化する）
+  readOnly: z.boolean().default(false),
 });
 
 // 設定の型定義
@@ -39,6 +42,10 @@ function loadConfig(): Config {
       name: process.env.SERVER_NAME ?? "@yonaka15/mcp-server-redmine",
       version: process.env.SERVER_VERSION ?? "0.1.0",
     },
+    // REDMINE_READ_ONLY が "true"（大文字小文字無視）または "1" の場合に有効化
+    readOnly: ["true", "1"].includes(
+      (process.env.REDMINE_READ_ONLY ?? "").trim().toLowerCase()
+    ),
   });
 }
 

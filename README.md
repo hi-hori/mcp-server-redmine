@@ -100,6 +100,10 @@ Set the following environment variables:
 - `REDMINE_API_KEY`: API key obtained from Redmine user settings
 - `REDMINE_HOST`: Redmine server URL (e.g., `https://redmine.example.com`)
 
+Optional:
+
+- `REDMINE_READ_ONLY`: Set to `true` (or `1`) to run the server in read-only mode. In this mode all write tools (create / update / delete, archive / unarchive, add / remove watcher) are hidden from the tool list and rejected if called. Only read tools (list / get / show) are available. Defaults to `false`.
+
 ## Testing
 
 ### Unit Tests

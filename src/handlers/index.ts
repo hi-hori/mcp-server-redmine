@@ -81,6 +81,37 @@ const TOOLS: Tool[] = [
   tools.USER_DELETE_TOOL,
 ];
 
+// Write (create/update/delete) tools. These are disabled when readOnly mode is on.
+const WRITE_TOOLS: Tool[] = [
+  // Issue-related write tools
+  tools.ISSUE_CREATE_TOOL,
+  tools.ISSUE_UPDATE_TOOL,
+  tools.ISSUE_DELETE_TOOL,
+  tools.ISSUE_ADD_WATCHER_TOOL,
+  tools.ISSUE_REMOVE_WATCHER_TOOL,
+
+  // Project-related write tools
+  tools.PROJECT_CREATE_TOOL,
+  tools.PROJECT_UPDATE_TOOL,
+  tools.PROJECT_ARCHIVE_TOOL,
+  tools.PROJECT_UNARCHIVE_TOOL,
+  tools.PROJECT_DELETE_TOOL,
+
+  // Time entry write tools
+  tools.TIME_ENTRY_CREATE_FOR_ISSUE_TOOL,
+  tools.TIME_ENTRY_CREATE_FOR_PROJECT_TOOL,
+  tools.TIME_ENTRY_UPDATE_TOOL,
+  tools.TIME_ENTRY_DELETE_TOOL,
+
+  // User-related write tools
+  tools.USER_CREATE_TOOL,
+  tools.USER_UPDATE_TOOL,
+  tools.USER_DELETE_TOOL,
+];
+
+// Set of write tool names for quick lookup in read-only mode.
+const WRITE_TOOL_NAMES = new Set(WRITE_TOOLS.map((t) => t.name));
+
 // Initialize server
 const server = new Server(
   {
@@ -95,11 +126,25 @@ const server = new Server(
 );
 
 // Tools list handler
-server.setRequestHandler(ListToolsRequestSchema, async () => ({
+server.setRequestHandler(ListToolsRequestSchema, async () => {
   // Dynamically build the list of tools from the tools module at runtime
   // This ensures that any tool added to tools/index.ts is automatically included.
-  tools: Object.values(tools).filter(t => typeof t === 'object' && t !== null && 'name' in t && 'description' in t && 'inputSchema' in t) as Tool[],
-}));
+  const allTools = Object.values(tools).filter(
+    (t) =>
+      typeof t === "object" &&
+      t !== null &&
+      "name" in t &&
+      "description" in t &&
+      "inputSchema" in t
+  ) as Tool[];
+
+  // In read-only mode, hide write (create/update/delete) tools.
+  const availableTools = config.readOnly
+    ? allTools.filter((t) => !WRITE_TOOL_NAMES.has(t.name))
+    : allTools;
+
+  return { tools: availableTools };
+});
 
 // Tool execution handler
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -109,6 +154,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (!args || typeof args !== "object") {
       // Even if args is null or undefined, pass it as an empty object for handlers that might not expect args.
       // Specific handlers should validate their own arguments.
+    }
+
+    // In read-only mode, reject any write (create/update/delete) tool calls,
+    // even if the client somehow requests a tool that is hidden from the list.
+    if (config.readOnly && WRITE_TOOL_NAMES.has(name)) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Tool '${name}' is disabled because the server is running in read-only mode (REDMINE_READ_ONLY=true).`,
+          },
+        ],
+        isError: true,
+      };
     }
 
     // Execute handler

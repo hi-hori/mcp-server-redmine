@@ -40,9 +40,10 @@ describe('list_project_statuses', () => {
 
     mockHandlerContext = {
       client: mockClientInstance as any,
-      config: { 
+      config: {
         redmine: { apiKey: 'test-key', host: 'http://localhost' },
-        server: { name: 'test', version: '1.0.0' }
+        server: { name: 'test', version: '1.0.0' },
+        readOnly: false
       },
       logger: {
         info: jest.fn(),
